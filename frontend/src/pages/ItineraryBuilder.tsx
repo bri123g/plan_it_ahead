@@ -48,16 +48,6 @@ export function ItineraryBuilder() {
     }
   };
 
-  const addItem = async (itemData: any) => {
-    try {
-      await api.post(`/itineraries/${id}/items`, itemData);
-      loadItems();
-      calculateBudget();
-    } catch (err) {
-      console.error('Failed to add item:', err);
-    }
-  };
-
   const removeItem = async (itemId: number) => {
     try {
       await api.delete(`/itineraries/${id}/items/${itemId}`);
@@ -93,29 +83,32 @@ export function ItineraryBuilder() {
 
       <div className="space-y-6">
         {Object.keys(itemsByDay).length > 0 ? (
-          Object.entries(itemsByDay).map(([day, dayItems]) => (
-            <div key={day} className="border rounded-lg p-4">
-              <h2 className="text-xl font-semibold mb-4">Day {day}</h2>
-              <div className="space-y-2">
-                {dayItems.map((item) => (
-                  <div key={item.item_id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div>
-                      <h3 className="font-medium">{item.item_name}</h3>
-                      {item.time && <p className="text-sm text-gray-600">{item.time}</p>}
-                      {item.estimated_cost && <p className="text-sm">${item.estimated_cost}</p>}
+          Object.entries(itemsByDay).map(([day, dayItems]) => {
+            const typedDayItems = dayItems as any[];
+            return (
+              <div key={day} className="border rounded-lg p-4">
+                <h2 className="text-xl font-semibold mb-4">Day {day}</h2>
+                <div className="space-y-2">
+                  {typedDayItems.map((item: any) => (
+                    <div key={item.item_id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                      <div>
+                        <h3 className="font-medium">{item.item_name}</h3>
+                        {item.time && <p className="text-sm text-gray-600">{item.time}</p>}
+                        {item.estimated_cost && <p className="text-sm">${item.estimated_cost}</p>}
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeItem(item.item_id)}
+                      >
+                        Remove
+                      </Button>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeItem(item.item_id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <p className="text-center text-gray-500">No items in this itinerary yet</p>
         )}

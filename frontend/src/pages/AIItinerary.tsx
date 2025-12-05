@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import api from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthHook';
 import { Button } from '../components/ui/button';
 
 export function AIItinerary() {
-  const { user } = useAuth();
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');

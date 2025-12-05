@@ -9,7 +9,6 @@ export function Chat() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<number | null>(id ? parseInt(id) : null);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

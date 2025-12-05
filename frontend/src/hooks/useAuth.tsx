@@ -1,26 +1,21 @@
 /**
  * Authentication hook and context
  */
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import api from '../services/api';
+import { AuthContext } from './useAuthHook';
+
+interface UserPreferences {
+  [key: string]: unknown;
+}
 
 interface User {
   user_id: number;
   name: string;
   email: string;
-  preferences?: any;
+  preferences?: UserPreferences;
 }
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, preferences?: any) => Promise<void>;
-  logout: () => void;
-  updateUser: (user: User) => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -32,32 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem('user');
     
     if (token && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        
-        // Verify token is still valid
-        api.get('/auth/me')
-          .then((response) => {
-            setUser(response.data.user);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-          })
-          .catch(() => {
-            // Token invalid, clear storage
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user');
-            setUser(null);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      } catch {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        setLoading(false);
-      }
+      // Verify token is still valid
+      api.get('/auth/me')
+        .then((response) => {
+          setUser(response.data.user);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        })
+        .catch(() => {
+          // Token invalid, clear storage
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          setUser(null);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
-      setLoading(false);
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => setLoading(false), 0);
     }
   }, []);
 
@@ -70,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
-  const register = async (name: string, email: string, password: string, preferences?: any) => {
+  const register = async (name: string, email: string, password: string, preferences?: UserPreferences) => {
     const response = await api.post('/auth/register', { name, email, password, preferences });
     const { user: userData, access_token } = response.data;
     
@@ -96,12 +83,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
-
