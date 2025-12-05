@@ -6,3 +6,4 @@ Flask-JWT-Extended==4.4.4
 passlib[bcrypt]==1.7.4
 requests==2.31.0
 psycopg[binary]==3.1.15
+openai>=1.0.0

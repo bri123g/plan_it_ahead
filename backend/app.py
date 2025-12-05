@@ -29,6 +29,10 @@ from models import db
 from auth import bp as auth_bp, init_jwt
 from db_reflect import init_reflector
 from itineraries import bp as itineraries_bp
+from search import bp as search_bp
+from ai_itinerary import bp as ai_bp
+from matching import bp as matching_bp
+from chat import bp as chat_bp
 
 # Initialize extensions
 db.init_app(app)
@@ -37,6 +41,10 @@ jwt = init_jwt(app)
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(itineraries_bp)
+app.register_blueprint(search_bp)
+app.register_blueprint(ai_bp)
+app.register_blueprint(matching_bp)
+app.register_blueprint(chat_bp)
 
 # Initialize automap reflector (will reflect existing Postgres tables)
 try:
