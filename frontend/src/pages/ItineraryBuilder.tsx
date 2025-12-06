@@ -65,8 +65,11 @@ export function ItineraryBuilder() {
   useEffect(() => {
     if (id) {
       loadItinerary();
-      loadSavedData();
-      calculateBudget();
+      // First check localStorage, then fallback to API if needed
+      const hasLocalData = loadSavedData();
+      if (!hasLocalData) {
+        calculateBudget();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -82,7 +85,7 @@ export function ItineraryBuilder() {
     }
   };
 
-  const loadSavedData = () => {
+  const loadSavedData = (): boolean => {
     // Load saved data from localStorage
     const savedDataStr = localStorage.getItem('planit_saved_data');
     if (savedDataStr) {
@@ -91,25 +94,24 @@ export function ItineraryBuilder() {
         if (savedData.itinerary_id === parseInt(id || '0')) {
           setSavedFlights(savedData.saved_flights || []);
           setSavedItems(savedData.saved_items || []);
-          // Update budget from saved data
+          // Update budget from saved data (this has correct breakdown)
           setBudget({
             total_budget: savedData.total_cost,
             breakdown: savedData.breakdown
           });
+          return true;
         }
       } catch (e) {
         console.error('Error parsing saved data:', e);
       }
     }
+    return false;
   };
 
   const calculateBudget = async () => {
     try {
       const response = await api.get(`/itineraries/${id}/budget`);
-      // Only update if we don't have saved data
-      if (!budget) {
-        setBudget(response.data);
-      }
+      setBudget(response.data);
     } catch (err) {
       console.error('Failed to calculate budget:', err);
     }

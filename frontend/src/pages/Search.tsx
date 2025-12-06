@@ -451,9 +451,25 @@ export function Search() {
 
     const itemType = searchType === 'hotels' ? 'hotel' : 'attraction';
     
+    // Calculate estimated_cost properly based on item type
+    let estimatedCost = 0;
+    if (itemType === 'hotel') {
+      const nights = computeNights();
+      const perNight = selectedItem.price_per_night || selectedItem.price || getFallbackPriceForItem(selectedItem);
+      estimatedCost = Number(perNight || 0) * nights;
+    } else {
+      // Attraction: use existing price or generate fallback
+      estimatedCost = selectedItem.price || selectedItem.estimated_cost || getFallbackPriceForItem(selectedItem);
+    }
+    
+    // Store with calculated estimated_cost
     const pendingItem: PendingItem = {
       type: itemType,
-      data: selectedItem,
+      data: {
+        ...selectedItem,
+        estimated_cost: estimatedCost,
+        price: estimatedCost // Also set price for consistency
+      },
       addedAt: new Date().toISOString()
     };
 
@@ -580,7 +596,8 @@ export function Search() {
       const flights = pendingItems.filter(item => item.type === 'flight').map(item => item.data);
       const items = pendingItems.filter(item => item.type !== 'flight').map(item => {
         const itemType = item.type || 'other';
-        const itemPrice = item.data?.price || item.data?.price_per_night || item.data?.estimated_cost || 0;
+        // Prioritize estimated_cost (pre-calculated with nights for hotels, fallback for attractions)
+        const itemPrice = item.data?.estimated_cost || item.data?.price || item.data?.price_per_night || 0;
         return {
           name: item.data?.name || item.data?.title || 'Unknown',
           price: Number(itemPrice) || 0,
@@ -872,7 +889,7 @@ export function Search() {
                   { item.price && (
                     <div className="text-green-600 font-bold mr-2">{item.currency ? `${item.currency} ${item.price}` : `$${item.price}`}</div>
                   )}
-                  <Button onClick={() => openAddModal({ xid, name: item.name, title: item.name, description: item.description, price: item.price || item.rating })} className="flex-1">Add to Itinerary</Button>
+                  <Button onClick={() => openAddModal({ ...item, xid, name: item.name, title: item.name, description: item.description })} className="flex-1">Add to Itinerary</Button>
                   { item.link ? (
                     <a href={item.link} target="_blank" rel="noreferrer" className="inline-block">
                       <Button variant="outline">View</Button>

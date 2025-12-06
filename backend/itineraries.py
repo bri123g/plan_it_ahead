@@ -27,6 +27,15 @@ def _parse_datetime(s):
         return None
 
 
+def _timedelta_to_seconds(td):
+    """Convert timedelta to total seconds (int) for JSON serialization, or None."""
+    if td is None:
+        return None
+    if isinstance(td, timedelta):
+        return int(td.total_seconds())
+    return td
+
+
 def _parse_iso_duration_to_minutes(s):
     """Parse ISO-8601 duration strings like 'PT31H40M' or 'PT13H20M' into integer minutes.
     Returns an int number of minutes, or None if it can't be parsed.
@@ -387,6 +396,10 @@ def get_time_slots(itinerary_id):
 @bp.route('/<int:itinerary_id>/budget', methods=['GET', 'POST'])
 @jwt_required()
 def calculate_budget(itinerary_id):
+    """
+    Returns basic budget info. Detailed breakdown should come from localStorage 
+    (stored from /save response). This is a fallback for when localStorage is empty.
+    """
     user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
@@ -400,21 +413,14 @@ def calculate_budget(itinerary_id):
         
         total_budget = float(it.total_cost) if hasattr(it, 'total_cost') and it.total_cost else 0.0
         
-        if request.method == 'POST':
-            data = request.get_json() or {}
-            breakdown = data.get('breakdown', {
-                'flights': total_budget,
-                'hotels': 0.0,
-                'attractions': 0.0,
-                'other': 0.0
-            })
-        else:
-            breakdown = {
-                'flights': total_budget,
-                'hotels': 0.0,
-                'attractions': 0.0,
-                'other': 0.0
-            }
+        # Simple fallback breakdown - detailed breakdown comes from localStorage
+        # which has the correct data from the /save endpoint
+        breakdown = {
+            'flights': total_budget,  # Assume all cost is flights as fallback
+            'hotels': 0.0,
+            'attractions': 0.0,
+            'other': 0.0
+        }
         
         return jsonify({
             'itinerary_id': itinerary_id,
@@ -624,8 +630,10 @@ def add_flight_to_itinerary(itinerary_id):
             Flight = get_class('flights')
             
             # Extract flight data with placeholder values for missing fields
+            # Truncate flight_num to 20 chars max for database constraint
+            raw_flight_num = data.get('flight_number', data.get('flight_id', 'N/A')) if data.get('flight_number', data.get('flight_id')) else 'N/A'
             flight_data = {
-                'flight_num': data.get('flight_number', data.get('flight_id', 'N/A')) if data.get('flight_number', data.get('flight_id')) else 'N/A',
+                'flight_num': str(raw_flight_num)[:20],
                 'airline': data.get('airline', 'Unknown')[:50] if data.get('airline') else 'Unknown',
                 'departure_time': data.get('departure_date', data.get('departure_time')),
                 'arrival_time': data.get('arrival_date', data.get('arrival_time')),
@@ -642,23 +650,27 @@ def add_flight_to_itinerary(itinerary_id):
             elif hasattr(Flight, 'flight_class'):
                 flight_data['flight_class'] = data.get('travel_class', data.get('cabin_class', 'Economy'))[:20]
             
-            # Handle duration (convert to integer minutes if possible)
             duration_str = data.get('duration', '')
             if hasattr(Flight, 'duration'):
                 duration_minutes = _parse_iso_duration_to_minutes(duration_str)
-                # If parsing fails, attempt to store 0 or leave None so DB can handle defaults
-                flight_data['duration'] = int(duration_minutes) if duration_minutes is not None else None
+                if duration_minutes is not None:
+                    flight_data['duration'] = timedelta(minutes=int(duration_minutes))
+                else:
+                    flight_data['duration'] = None
             
             flight = Flight(**flight_data)
             session.add(flight)
             session.commit()
             
-            # Return flight info
+            # Return flight info (convert timedelta to seconds for JSON serialization)
             flight_id = getattr(flight, 'flight_id', None) or getattr(flight, 'id', None)
+            response_data = flight_data.copy()
+            if 'duration' in response_data:
+                response_data['duration'] = _timedelta_to_seconds(response_data['duration'])
             return jsonify({
                 'flight': {
                     'flight_id': flight_id,
-                    **flight_data
+                    **response_data
                 }
             }), 201
         except (RuntimeError, AttributeError) as e:
@@ -706,7 +718,8 @@ def save_itinerary(itinerary_id):
             incoming_nums = []
             computed_records = []
             for flight_data in flights:
-                fnum = str(flight_data.get('flight_number', flight_data.get('flight_id', 'N/A')))
+                raw_fnum = flight_data.get('flight_number', flight_data.get('flight_id', 'N/A'))
+                fnum = str(raw_fnum)[:20]  # Truncate to 20 characters
                 incoming_nums.append(fnum)
                 computed_records.append((fnum, flight_data))
 
@@ -745,20 +758,31 @@ def save_itinerary(itinerary_id):
                     flight_record['flight_class'] = str(flight_data.get('travel_class', 'Economy'))[:20]
 
                 if hasattr(Flight, 'duration'):
-                    # Ensure we store an integer number of minutes for duration
+                    # Convert minutes to timedelta for PostgreSQL interval type
                     duration_minutes = _parse_iso_duration_to_minutes(flight_data.get('duration', ''))
-                    flight_record['duration'] = int(duration_minutes) if duration_minutes is not None else None
+                    if duration_minutes is not None:
+                        flight_record['duration'] = timedelta(minutes=int(duration_minutes))
+                    else:
+                        flight_record['duration'] = None
 
                 # Skip if DB already contains this flight_num or we've already added it in this batch
                 if fnum in existing_nums or fnum in added_nums:
-                    saved_flights.append(flight_record)
+                    # Convert timedelta to seconds for JSON serialization
+                    response_record = flight_record.copy()
+                    if 'duration' in response_record:
+                        response_record['duration'] = _timedelta_to_seconds(response_record['duration'])
+                    saved_flights.append(response_record)
                     continue
 
                 try:
                     flight = Flight(**flight_record)
                     session.add(flight)
                     added_nums.add(fnum)
-                    saved_flights.append(flight_record)
+                    # Convert timedelta to seconds for JSON serialization
+                    response_record = flight_record.copy()
+                    if 'duration' in response_record:
+                        response_record['duration'] = _timedelta_to_seconds(response_record['duration'])
+                    saved_flights.append(response_record)
                 except Exception as e:
                     # If insertion fails, log and continue
                     print(f"Error adding flight record: {e}")
