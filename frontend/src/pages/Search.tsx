@@ -19,6 +19,21 @@ interface SearchResult {
   hotel_id?: string;
   hotel_key?: string;
   id?: string;
+  image_url?: string;
+  image?: string;
+  thumbnail?: string;
+  photo?: string;
+  address?: string;
+  type?: string;
+  rate?: number;
+  reviews?: number;
+  best_time?: string;
+  duration_minutes?: number;
+  estimated_cost?: number;
+  lat?: number;
+  lon?: number;
+  link?: string;
+  currency?: string;
 }
 
 interface Itinerary {
@@ -27,6 +42,37 @@ interface Itinerary {
   title?: string;
   start_date?: string;
   end_date?: string;
+  destination?: string;
+}
+
+interface AttractionDetail {
+  lat?: number;
+  lon?: number;
+  [key: string]: unknown;
+}
+
+interface Activity {
+  [key: string]: unknown;
+}
+
+interface Hotel extends SearchResult {
+  image?: string;
+  address?: string;
+}
+
+interface ApiResponse {
+  itinerary_id?: number;
+  [key: string]: unknown;
+}
+
+interface CurrentItinerary {
+  itinerary_id: number;
+  id?: number;
+  title: string;
+  origin?: string;
+  destination?: string;
+  departure_date?: string;
+  return_date?: string;
 }
 
 const STORAGE_KEY = 'planit_pending_items';
@@ -57,9 +103,8 @@ export function Search() {
   const [searchType, setSearchType] = useState<SearchType>('attractions');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [attractionDetails, setAttractionDetails] = useState<Record<string, any>>({});
-  const [activitiesMap, setActivitiesMap] = useState<Record<string, any[]>>({});
-  const [expandedXid, setExpandedXid] = useState<string | null>(null);
+  const [attractionDetails, setAttractionDetails] = useState<Record<string, AttractionDetail>>({});
+  const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -74,14 +119,7 @@ export function Search() {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
-  const [currentItinerary, setCurrentItinerary] = useState<{
-    itinerary_id: number;
-    title: string;
-    origin?: string;
-    destination?: string;
-    departure_date?: string;
-    return_date?: string;
-  } | null>(null);
+  const [currentItinerary, setCurrentItinerary] = useState<CurrentItinerary | null>(null);
 
   useEffect(() => {
     loadItineraries();
@@ -89,7 +127,7 @@ export function Search() {
     
     const storedItinerary = localStorage.getItem('planit_current_itinerary');
     if (storedItinerary) {
-      const itinerary = JSON.parse(storedItinerary);
+      const itinerary = JSON.parse(storedItinerary) as CurrentItinerary;
       setCurrentItinerary(itinerary);
       setSelectedItineraryId(itinerary.itinerary_id);
       
@@ -108,6 +146,8 @@ export function Search() {
     }
     // If we open the page with attractions selected, trigger a search
     if (searchType === 'attractions') {
+      const stored = localStorage.getItem('planit_current_itinerary');
+      const storedItinerary: CurrentItinerary | null = stored ? JSON.parse(stored) : null;
       const dest = storedItinerary?.destination || query;
       // only auto-fill attractions when dest is not a 3-letter IATA code
       const isIata = dest ? (/^[A-Z]{3}$/i.test(dest.toString().trim())) : false;
@@ -119,6 +159,8 @@ export function Search() {
     }
     // If the page opens with hotels selected, auto-fill and search using the itinerary destination
     if (searchType === 'hotels') {
+      const stored = localStorage.getItem('planit_current_itinerary');
+      const storedItinerary: CurrentItinerary | null = stored ? JSON.parse(stored) : null;
       const hotelDest = storedItinerary?.destination || query;
       if (hotelDest && storedItinerary?.departure_date && storedItinerary?.return_date) {
         setQuery(hotelDest);
@@ -127,6 +169,7 @@ export function Search() {
         setTimeout(() => handleSearch('hotels'), 0);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // compute a sensible default itinerary title:
@@ -173,7 +216,6 @@ export function Search() {
   const switchSearchType = (type: SearchType) => {
     // clear existing results and expanded state when switching
     setResults([]);
-    setExpandedXid(null);
     setAttractionDetails({});
     setActivitiesMap({});
     setSearchType(type);
@@ -193,7 +235,7 @@ export function Search() {
   };
 
   // Helper: detect if an item looks like a hotel response
-  const isHotelLike = (item: any) => {
+  const isHotelLike = (item: SearchResult | null | undefined): boolean => {
     if (!item) return false;
     return !!(item.hotel_id || item.hotel_key || item.price_per_night || item.rating || item.address);
   };
@@ -208,7 +250,7 @@ export function Search() {
       const outDate = new Date(end);
       const diff = Math.round((outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60 * 24));
       return diff > 0 ? diff : 1;
-    } catch (e) {
+    } catch {
       return 1;
     }
   };
@@ -220,7 +262,7 @@ export function Search() {
   const formatCurrency = (n: number) => `$${Math.round(n)}`;
   
   // Deterministic fallback price per hotel based on a hash of the hotel key/name
-  const getFallbackPriceForItem = (item: any) => {
+  const getFallbackPriceForItem = (item: SearchResult | null | undefined): number => {
     const key = (item && (item.hotel_key || item.hotel_id || item.id || item.name || item.title)) || '';
     let str = String(key);
     if (!str) str = JSON.stringify(item || '');
@@ -237,28 +279,28 @@ export function Search() {
   
 
   // Normalize attraction fields (ensure image_url exists)
-  const normalizeAttraction = (item: any) => {
+  const normalizeAttraction = (item: SearchResult): SearchResult => {
     if (!item) return item;
-    const normalized = { ...item };
-    normalized.image_url = item.image_url || item.image || item.thumbnail || item.photo || null;
+    const normalized: SearchResult = { ...item };
+    normalized.image_url = item.image_url || item.image || item.thumbnail || item.photo || undefined;
     // keep xid/id mapping consistent
     normalized.xid = item.xid || item.id || item.xid;
     // map to AI recommendation fields for consistent rendering
     normalized.name = normalized.name || normalized.title || '';
-    normalized.reasoning = normalized.reasoning || normalized.description || '';
-    normalized.best_time = normalized.best_time || normalized.best_visit_time || undefined;
-    normalized.duration_minutes = normalized.duration_minutes || normalized.duration || undefined;
-    normalized.estimated_cost = normalized.estimated_cost || normalized.price || normalized.estimated_cost || undefined;
+    normalized.description = normalized.description || normalized.description || '';
+    normalized.best_time = item.best_time || undefined;
+    normalized.duration_minutes = item.duration_minutes || undefined;
+    normalized.estimated_cost = item.estimated_cost || item.price || undefined;
     return normalized;
   };
 
   // Normalize hotel fields (ensure image exists and price_per_night is present)
-  const normalizeHotel = (item: any) => {
-    if (!item) return item;
-    const normalized = { ...item };
-    normalized.image = item.image || item.thumbnail || item.image_url || item.photo || null;
-    normalized.price_per_night = item.price_per_night || item.price || item.nightly_price || null;
-    normalized.hotel_id = item.hotel_id || item.id || item.hotel_key || null;
+  const normalizeHotel = (item: SearchResult): Hotel => {
+    if (!item) return item as Hotel;
+    const normalized: Hotel = { ...item } as Hotel;
+    normalized.image = item.image || item.thumbnail || item.image_url || item.photo || undefined;
+    normalized.price_per_night = item.price_per_night || item.price || undefined;
+    normalized.hotel_id = item.hotel_id || item.id || item.hotel_key || undefined;
     return normalized;
   };
 
@@ -285,19 +327,16 @@ export function Search() {
         // search attractions by location (city) using Serp-enriched endpoint
         response = await api.get('/search/attractions-serp', { params: { location: query } });
         // Debugging: log response for diagnosis if server returns unexpected shape
-        // eslint-disable-next-line no-console
         console.debug('search/attractions response:', response.data);
         // If the attractions endpoint returned an attractions array, normalize/filter it
         if (response.data && response.data.attractions && Array.isArray(response.data.attractions)) {
           const raw = response.data.attractions || [];
           // Normalize each attraction and filter out items that look like hotels
-          const normalized = raw.map(normalizeAttraction).filter((it: any) => !isHotelLike(it));
+          const normalized = raw.map(normalizeAttraction).filter((it: SearchResult) => !isHotelLike(it));
           // Debug: if any items were filtered out, log it
-          // eslint-disable-next-line no-console
           console.debug('attractions fetched:', raw.length, 'kept:', normalized.length);
 
           setResults(normalized);
-          setExpandedXid(null);
           setAttractionDetails({});
           setActivitiesMap({});
           if (normalized.length === 0 && raw.length > 0) {
@@ -332,7 +371,6 @@ export function Search() {
           }
         });
         // Debugging: log hotel response
-        // eslint-disable-next-line no-console
         console.debug('search/hotels response:', response.data);
         const rawHotels = response.data.hotels || [];
         const normalizedHotels = rawHotels.map(normalizeHotel);
@@ -379,7 +417,7 @@ export function Search() {
     // Prefer the current itinerary if present; otherwise leave selection empty so
     // the placeholder shows the suggested default title (e.g., "Itinerary 4")
     if (currentItinerary) {
-      setSelectedItineraryId(currentItinerary.itinerary_id || currentItinerary.id || null);
+      setSelectedItineraryId(currentItinerary.itinerary_id || null);
     } else {
       setSelectedItineraryId(null);
     }
@@ -474,10 +512,10 @@ export function Search() {
           if (!itineraryId) {
         // Try to use the stored current itinerary
         const stored = localStorage.getItem('planit_current_itinerary');
-        const storedItinerary = stored ? JSON.parse(stored) : null;
+        const storedItinerary: CurrentItinerary | null = stored ? JSON.parse(stored) : null;
 
         try {
-          let createResp: any = null;
+          let createResp: { data: ApiResponse } | null = null;
           if (storedItinerary && storedItinerary.departure_date && storedItinerary.return_date) {
             // create using dates and optional title (uses create-from-flights endpoint)
                 createResp = await api.post('/itineraries/create-from-flights', {
@@ -490,21 +528,25 @@ export function Search() {
                 createResp = await api.post('/itineraries', { title: defaultItineraryTitle() });
           }
 
-          itineraryId = createResp.data.itinerary_id;
+          if (createResp && createResp.data && createResp.data.itinerary_id) {
+            itineraryId = createResp.data.itinerary_id;
 
-          // Store a minimal current itinerary locally so UX shows the selection
-          const title = storedItinerary?.title || `Itinerary ${ (itineraries?.length || 0) + 1 }`;
-          const current = {
-            itinerary_id: itineraryId,
-            title,
-            origin: storedItinerary?.origin,
-            destination: storedItinerary?.destination,
-            departure_date: storedItinerary?.departure_date,
-            return_date: storedItinerary?.return_date
-          };
-          localStorage.setItem('planit_current_itinerary', JSON.stringify(current));
-          setCurrentItinerary(current);
-          setSelectedItineraryId(itineraryId);
+            // Store a minimal current itinerary locally so UX shows the selection
+            const title = storedItinerary?.title || `Itinerary ${ (itineraries?.length || 0) + 1 }`;
+            const current: CurrentItinerary = {
+              itinerary_id: itineraryId,
+              title,
+              origin: storedItinerary?.origin,
+              destination: storedItinerary?.destination,
+              departure_date: storedItinerary?.departure_date,
+              return_date: storedItinerary?.return_date
+            };
+            localStorage.setItem('planit_current_itinerary', JSON.stringify(current));
+            setCurrentItinerary(current);
+            setSelectedItineraryId(itineraryId);
+          } else {
+            throw new Error('Failed to create itinerary: no ID returned');
+          }
           // reload itineraries list so user can see it in the dropdown
           await loadItineraries();
         } catch (createErr) {
@@ -706,9 +748,9 @@ export function Search() {
         {results.map((item, index) => {
           if (searchType === 'hotels') {
             // Render hotel card
-            const hotelId = (item as any).hotel_id || (item as any).hotel_key || (item as any).id || '';
+            const hotel = item as Hotel;
             const nights = computeNights();
-            const pricePerNight = (item as any).price_per_night || (item as any).price || null;
+            const pricePerNight = hotel.price_per_night || hotel.price || null;
             let totalCost: number | null = null;
             let fallbackPerNight: number | null = null;
             if (pricePerNight) {
@@ -725,8 +767,8 @@ export function Search() {
                     <CardTitle className="text-lg">{item.name || item.title || 'Unknown Hotel'}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    { (item as any).image && (
-                      <img src={(item as any).image} alt={item.name} className={`w-full object-cover rounded mb-2 h-36`} />
+                    { hotel.image && (
+                      <img src={hotel.image} alt={item.name} className={`w-full object-cover rounded mb-2 h-36`} />
                     ) }
                     {pricePerNight ? (
                       <p className="text-green-600 font-bold mb-1">Price per night: {formatCurrency(Number(pricePerNight))}</p>
@@ -735,7 +777,7 @@ export function Search() {
                     )}
                     <p className="text-sm text-gray-700 mb-1">Total for {nights} night{nights > 1 ? 's' : ''}: <span className="font-semibold">{formatCurrency(totalCost || 0)}</span></p>
                     {item.rating && <p className="text-sm mb-1">Rating: {item.rating}</p>}
-                    { (item as any).address && <p className="text-sm text-gray-600 mb-2">{(item as any).address}</p> }
+                    { hotel.address && <p className="text-sm text-gray-600 mb-2">{hotel.address}</p> }
                     
                     <div className="flex gap-2">
                       <Button onClick={() => openAddModal(item)} className="flex-1">Add to Itinerary</Button>
@@ -747,24 +789,24 @@ export function Search() {
           }
 
           // Render attractions in the same card style as AI recommendations
-          const xid = (item as any).xid || (item as any).id || '';
+          const xid = item.xid || item.id || '';
           return (
             <div 
               key={index} 
               className="border rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
             >
-              { (item as any).image_url && (
+              { item.image_url && (
                 <div className="relative h-40 overflow-hidden">
                   <img 
-                    src={(item as any).image_url} 
-                    alt={(item as any).name}
+                    src={item.image_url} 
+                    alt={item.name || ''}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  { (item as any).type && (
+                  { item.type && (
                     <span className="absolute top-2 right-2 text-xs bg-white/90 text-primary px-2 py-1 rounded-full font-medium">
-                      {(item as any).type}
+                      {item.type}
                     </span>
                   )}
                 </div>
@@ -774,49 +816,49 @@ export function Search() {
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">{item.name}</h3>
                   <div className="flex items-center gap-2">
-                    { (item as any).rate && (
-                      <div className="text-sm text-amber-700 font-semibold">{(item as any).rate}★</div>
+                    { item.rating && (
+                      <div className="text-sm text-amber-700 font-semibold">{item.rating}★</div>
                     )}
-                    { (item as any).reviews && (
-                      <div className="text-xs text-muted-foreground">({(item as any).reviews})</div>
+                    { item.description && (
+                      <div className="text-xs text-muted-foreground">({item.description.length})</div>
                     )}
-                    {! (item as any).image_url && (item as any).type && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">{(item as any).type}</span>
+                    {! item.image_url && item.type && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">{item.type}</span>
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{(item as any).description || ''}</p>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{item.description || ''}</p>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  {(item as any).best_time && (
+                  {item.best_time && (
                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1">
-                      <span>🕐</span> {(item as any).best_time}
+                      <span>🕐</span> {item.best_time}
                     </span>
                   )}
-                  {(item as any).duration_minutes && (
+                  {item.duration_minutes && (
                     <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1">
-                      <span>⏱️</span> {(item as any).duration_minutes} min
+                      <span>⏱️</span> {item.duration_minutes} min
                     </span>
                   )}
-                  {(item as any).rate && (
+                  {item.rating && (
                     <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full flex items-center gap-1">
-                      <span>⭐</span> {(item as any).rate}
+                      <span>⭐</span> {item.rating}
                     </span>
                   )}
                 </div>
-                {(item as any).lat && (item as any).lon && (
-                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><span>📍</span> {(item as any).lat.toFixed ? `${(item as any).lat.toFixed(3)}, ${(item as any).lon.toFixed(3)}` : ''}</p>
+                {item.lat && item.lon && (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><span>📍</span> {typeof item.lat === 'number' && typeof item.lon === 'number' ? `${item.lat.toFixed(3)}, ${item.lon.toFixed(3)}` : ''}</p>
                 )}
                 <div className="mt-3 flex gap-2">
-                  { (item as any).price && (
+                  { item.price && (
                     <div className="text-green-600 font-bold mr-2">{item.currency ? `${item.currency} ${item.price}` : `$${item.price}`}</div>
                   )}
-                  <Button onClick={() => openAddModal({ xid, name: item.name, title: item.name, description: item.description, price: item.price || item.rate })} className="flex-1">Add to Itinerary</Button>
-                  { (item as any).link ? (
-                    <a href={(item as any).link} target="_blank" rel="noreferrer" className="inline-block">
+                  <Button onClick={() => openAddModal({ xid, name: item.name, title: item.name, description: item.description, price: item.price || item.rating })} className="flex-1">Add to Itinerary</Button>
+                  { item.link ? (
+                    <a href={item.link} target="_blank" rel="noreferrer" className="inline-block">
                       <Button variant="outline">View</Button>
                     </a>
                   ) : (
-                    <Button variant="outline" onClick={() => { if (xid) { setExpandedXid(xid); fetchAttractionDetails(xid, (item as any).lat, (item as any).lon); } }}>Details</Button>
+                    <Button variant="outline" onClick={() => { if (xid) { fetchAttractionDetails(xid, item.lat, item.lon); } }}>Details</Button>
                   )}
                 </div>
               </div>

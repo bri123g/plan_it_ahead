@@ -19,7 +19,29 @@ interface Flight {
   airline?: string;
   airline_code?: string;
   duration?: string;
+  name?: string;
+  flight_type?: string;
 }
+
+type PendingItem = 
+  | {
+      type: 'flight';
+      data: Flight;
+      addedAt: string;
+    }
+  | {
+      type: 'attraction';
+      data: {
+        name: string;
+        description?: string;
+        price?: number;
+        duration_minutes?: number;
+        location?: string;
+        type?: string;
+        best_time?: string;
+      };
+      addedAt: string;
+    };
 
 export function CreateItinerary() {
   const navigate = useNavigate();
@@ -185,7 +207,7 @@ export function CreateItinerary() {
 
       const itineraryId = response.data.itinerary_id;
 
-      const pendingFlights = [];
+      const pendingFlights: PendingItem[] = [];
       
       const outboundFlight = outboundFlights.find(f => (f.flight_id || f.id) === selectedOutbound);
       if (outboundFlight) {
@@ -219,7 +241,7 @@ export function CreateItinerary() {
         }
       }
 
-      const allPendingItems = [...pendingFlights];
+      const allPendingItems: PendingItem[] = [...pendingFlights];
       if (aiRecommendations.length > 0) {
         const storedRecs = localStorage.getItem('planit_ai_recommendations');
         const recommendations: Recommendation[] = storedRecs ? JSON.parse(storedRecs) : aiRecommendations;
