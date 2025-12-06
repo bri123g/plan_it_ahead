@@ -44,10 +44,10 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
       <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Create Account
           </CardTitle>
           <CardDescription className="text-base">
@@ -72,7 +72,7 @@ export function Register() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="transition-all hover:border-primary/50"
+                className="transition-all hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             
@@ -86,7 +86,7 @@ export function Register() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="transition-all hover:border-primary/50"
+                className="transition-all hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             
@@ -100,7 +100,7 @@ export function Register() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="transition-all hover:border-primary/50"
+                className="transition-all hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             
@@ -114,13 +114,13 @@ export function Register() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="transition-all hover:border-primary/50"
+                className="transition-all hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
 
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]" 
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]" 
               disabled={loading}
               size="lg"
             >
@@ -140,7 +140,7 @@ export function Register() {
             Already have an account?{' '}
             <Link 
               to="/login" 
-              className="font-semibold text-primary hover:text-primary/80 transition-colors underline-offset-4 hover:underline"
+              className="font-semibold text-blue-600 hover:text-blue-700 transition-colors underline-offset-4 hover:underline"
             >
               Sign in
             </Link>

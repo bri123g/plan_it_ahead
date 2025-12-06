@@ -23,7 +23,7 @@ export function Home() {
                 <Link to="/ai" className="w-full md:w-auto">
                   <Button
                     size="lg"
-                    className="px-14 py-5 text-2xl bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 shadow-md"
+                    className="px-14 py-5 text-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
                   >
                     AI Itinerary Generator
                   </Button>

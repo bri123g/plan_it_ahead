@@ -132,12 +132,12 @@ export function Chat() {
   const currentConversation = conversations.find(c => c.conversation_id === selectedConversation);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-indigo-100 py-8 px-4">
       <div className="container mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-blue-600">Chat</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
-        <div className="border rounded-lg p-4 overflow-y-auto bg-white shadow-sm">
+        <div className="border rounded-lg p-4 overflow-y-auto bg-blue-50/50 shadow-sm">
           <h2 className="font-semibold mb-4 text-blue-600">Conversations</h2>
           <div className="space-y-3">
             {conversations.map((conv) => (
@@ -165,7 +165,7 @@ export function Chat() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 border rounded-lg flex flex-col bg-white shadow-sm">
+        <div className="lg:col-span-2 border rounded-lg flex flex-col bg-blue-50/50 shadow-sm">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b bg-blue-50">
