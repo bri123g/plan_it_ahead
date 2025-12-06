@@ -165,10 +165,16 @@ export function Search() {
       const storedItinerary: CurrentItinerary | null = stored ? JSON.parse(stored) : null;
       const hotelDest = storedItinerary?.destination || query;
       if (hotelDest && storedItinerary?.departure_date && storedItinerary?.return_date) {
-        setQuery(hotelDest);
+        // Check if destination is an airport code (3 letters) and don't use it for hotel search
+        const isIata = /^[A-Z]{3}$/i.test(hotelDest.toString().trim());
+        if (!isIata) {
+          setQuery(hotelDest);
+        }
         setCheckIn(storedItinerary.departure_date);
         setCheckOut(storedItinerary.return_date);
-        setTimeout(() => handleSearch('hotels'), 0);
+        if (!isIata) {
+          setTimeout(() => handleSearch('hotels'), 0);
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
