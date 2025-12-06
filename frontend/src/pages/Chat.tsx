@@ -44,12 +44,12 @@ export function Chat() {
     
     try {
       const response = await api.get(`/chat/conversations/${selectedConversation}/messages`);
-      const newMessages = response.data.messages || [];
+      const newMessages: Message[] = response.data.messages || [];
       
       // Update messages, avoiding duplicates and maintaining order
       setMessages(prev => {
-        const existingIds = new Set(prev.map(m => m.message_id));
-        const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.message_id));
+        const existingIds = new Set(prev.map((m: Message) => m.message_id));
+        const uniqueNewMessages = newMessages.filter((m: Message) => !existingIds.has(m.message_id));
         
         if (uniqueNewMessages.length === 0 && prev.length === newMessages.length) {
           return prev; // No changes, avoid re-render

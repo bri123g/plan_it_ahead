@@ -563,21 +563,21 @@ export function Search() {
           }
 
           if (createResp && createResp.data && createResp.data.itinerary_id) {
-            itineraryId = createResp.data.itinerary_id;
+          itineraryId = createResp.data.itinerary_id;
 
-            // Store a minimal current itinerary locally so UX shows the selection
-            const title = storedItinerary?.title || `Itinerary ${ (itineraries?.length || 0) + 1 }`;
+          // Store a minimal current itinerary locally so UX shows the selection
+          const title = storedItinerary?.title || `Itinerary ${ (itineraries?.length || 0) + 1 }`;
             const current: CurrentItinerary = {
-              itinerary_id: itineraryId,
-              title,
-              origin: storedItinerary?.origin,
-              destination: storedItinerary?.destination,
-              departure_date: storedItinerary?.departure_date,
-              return_date: storedItinerary?.return_date
-            };
-            localStorage.setItem('planit_current_itinerary', JSON.stringify(current));
-            setCurrentItinerary(current);
-            setSelectedItineraryId(itineraryId);
+            itinerary_id: itineraryId,
+            title,
+            origin: storedItinerary?.origin,
+            destination: storedItinerary?.destination,
+            departure_date: storedItinerary?.departure_date,
+            return_date: storedItinerary?.return_date
+          };
+          localStorage.setItem('planit_current_itinerary', JSON.stringify(current));
+          setCurrentItinerary(current);
+          setSelectedItineraryId(itineraryId);
           } else {
             throw new Error('Failed to create itinerary: no ID returned');
           }
