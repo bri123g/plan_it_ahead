@@ -73,6 +73,8 @@ interface CurrentItinerary {
   destination?: string;
   departure_date?: string;
   return_date?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 const STORAGE_KEY = 'planit_pending_items';
@@ -611,10 +613,13 @@ export function Search() {
         items
       });
 
-      localStorage.setItem('planit_saved_data', JSON.stringify({
+      // Store per-itinerary (new format) and also in the old format for backwards compat
+      const savedDataPayload = {
         itinerary_id: itineraryId,
         ...response.data
-      }));
+      };
+      localStorage.setItem(`planit_saved_data_${itineraryId}`, JSON.stringify(savedDataPayload));
+      localStorage.setItem('planit_saved_data', JSON.stringify(savedDataPayload));
 
       clearPendingItems();
       setPendingItems([]);
@@ -651,9 +656,16 @@ export function Search() {
         <div className="mb-6 p-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-lg">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold">{currentItinerary.title}</h2>
+              <h2 className="text-xl font-bold">{currentItinerary.title || `Itinerary ${currentItinerary.itinerary_id}`}</h2>
               <p className="text-sm opacity-90">
-                {currentItinerary.origin} → {currentItinerary.destination} | {currentItinerary.departure_date} - {currentItinerary.return_date}
+                {currentItinerary.origin && currentItinerary.destination 
+                  ? `${currentItinerary.origin} → ${currentItinerary.destination} | `
+                  : ''}
+                {currentItinerary.departure_date && currentItinerary.return_date 
+                  ? `${currentItinerary.departure_date} - ${currentItinerary.return_date}`
+                  : currentItinerary.start_date && currentItinerary.end_date
+                    ? `${currentItinerary.start_date} - ${currentItinerary.end_date}`
+                    : ''}
               </p>
               <p className="text-sm mt-1">
                 Add hotels and attractions to your trip. Click "Save All to Itinerary" when done.

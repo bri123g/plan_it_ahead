@@ -201,12 +201,22 @@ def list_itineraries():
         rows = session.query(Itinerary).filter_by(user_id=user_id).all()
         out = []
         for it in rows:
-            out.append({
+            item = {
                 'itinerary_id': it.itinerary_id,
                 'user_id': it.user_id,
                 'activity_start_time': str(it.activity_start_time) if it.activity_start_time else None,
                 'total_cost': float(it.total_cost) if it.total_cost is not None else None
-            })
+            }
+            # Include additional fields if they exist
+            if hasattr(it, 'title') and it.title:
+                item['title'] = it.title
+            if hasattr(it, 'start_date') and it.start_date:
+                item['start_date'] = str(it.start_date)
+            if hasattr(it, 'end_date') and it.end_date:
+                item['end_date'] = str(it.end_date)
+            if hasattr(it, 'created_at') and it.created_at:
+                item['created_at'] = str(it.created_at)
+            out.append(item)
         return jsonify(out), 200
     finally:
         session.close()
@@ -229,12 +239,22 @@ def get_itinerary(itinerary_id):
         it = session.query(Itinerary).filter_by(itinerary_id=itinerary_id, user_id=user_id).first()
         if not it:
             return jsonify({'msg': 'not found or unauthorized'}), 404
-        return jsonify({
+        
+        result = {
             'itinerary_id': it.itinerary_id,
             'user_id': it.user_id,
             'activity_start_time': str(it.activity_start_time) if it.activity_start_time else None,
             'total_cost': float(it.total_cost) if it.total_cost is not None else None
-        }), 200
+        }
+        # Include additional fields if they exist
+        if hasattr(it, 'title') and it.title:
+            result['title'] = it.title
+        if hasattr(it, 'start_date') and it.start_date:
+            result['start_date'] = str(it.start_date)
+        if hasattr(it, 'end_date') and it.end_date:
+            result['end_date'] = str(it.end_date)
+        
+        return jsonify(result), 200
     finally:
         session.close()
 

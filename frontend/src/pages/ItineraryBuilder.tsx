@@ -65,7 +65,7 @@ export function ItineraryBuilder() {
   useEffect(() => {
     if (id) {
       loadItinerary();
-      // First check localStorage, then fallback to API if needed
+      // First check localStorage (per-itinerary), then fallback to API if needed
       const hasLocalData = loadSavedData();
       if (!hasLocalData) {
         calculateBudget();
@@ -86,8 +86,15 @@ export function ItineraryBuilder() {
   };
 
   const loadSavedData = (): boolean => {
-    // Load saved data from localStorage
-    const savedDataStr = localStorage.getItem('planit_saved_data');
+    // Try per-itinerary storage first (new format)
+    const perItineraryKey = `planit_saved_data_${id}`;
+    let savedDataStr = localStorage.getItem(perItineraryKey);
+    
+    // Fallback to old single-key format for backwards compatibility
+    if (!savedDataStr) {
+      savedDataStr = localStorage.getItem('planit_saved_data');
+    }
+    
     if (savedDataStr) {
       try {
         const savedData: SavedData = JSON.parse(savedDataStr);
@@ -117,6 +124,65 @@ export function ItineraryBuilder() {
     }
   };
 
+  const handleAddMoreItems = () => {
+    // Set current itinerary context so Search page knows which itinerary to add to
+    const itineraryContext = {
+      itinerary_id: parseInt(id || '0'),
+      title: itinerary?.title || `Itinerary ${id}`,
+      start_date: itinerary?.start_date,
+      end_date: itinerary?.end_date
+    };
+    localStorage.setItem('planit_current_itinerary', JSON.stringify(itineraryContext));
+    
+    // Convert existing saved items to pending items format so they show up in Search
+    interface PendingItem {
+      type: string;
+      data: Record<string, unknown>;
+      addedAt: string;
+    }
+    const existingPendingItems: PendingItem[] = [];
+    
+    // Add existing flights as pending items
+    savedFlights.forEach(flight => {
+      existingPendingItems.push({
+        type: 'flight',
+        data: {
+          name: `${flight.from_airport} → ${flight.to_airport}`,
+          flight_number: flight.flight_num,
+          airline: flight.airline,
+          origin: flight.from_airport,
+          destination: flight.to_airport,
+          origin_city: flight.from_city,
+          destination_city: flight.to_city,
+          departure_date: flight.departure_time,
+          arrival_date: flight.arrival_time,
+          price: flight.price,
+          duration: flight.duration
+        },
+        addedAt: new Date().toISOString()
+      });
+    });
+    
+    // Add existing hotels/attractions as pending items
+    savedItems.forEach(item => {
+      existingPendingItems.push({
+        type: item.type,
+        data: {
+          name: item.name,
+          title: item.name,
+          price: item.cost,
+          estimated_cost: item.cost
+        },
+        addedAt: new Date().toISOString()
+      });
+    });
+    
+    // Store existing items as pending so Search page shows them
+    localStorage.setItem('planit_pending_items', JSON.stringify(existingPendingItems));
+    
+    navigate('/search');
+  };
+
   if (loading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
@@ -132,7 +198,7 @@ export function ItineraryBuilder() {
         <h1 className="text-3xl font-bold">
           {itinerary?.title || 'Itinerary Builder'}
         </h1>
-        <Button onClick={() => navigate('/search')}>
+        <Button onClick={handleAddMoreItems}>
           Add More Items
         </Button>
       </div>
@@ -291,7 +357,7 @@ export function ItineraryBuilder() {
             <p className="text-gray-500 mb-4">
               No items in this itinerary yet.
             </p>
-            <Button onClick={() => navigate('/search')}>
+            <Button onClick={handleAddMoreItems}>
               Search & Add Items
             </Button>
           </CardContent>

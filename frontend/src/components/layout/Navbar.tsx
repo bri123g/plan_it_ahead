@@ -21,7 +21,6 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <Link to="/search" className="text-sm hover:text-primary">Search</Link>
               <Link to="/itineraries" className="text-sm hover:text-primary">My Itineraries</Link>
               <Link to="/ai" className="text-sm hover:text-primary">AI Planner</Link>
               <Link to="/companions" className="text-sm hover:text-primary">Companions</Link>

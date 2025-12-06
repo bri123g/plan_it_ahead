@@ -42,7 +42,7 @@ export function Login() {
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('user', JSON.stringify(userData));
       updateUser(userData);
-      navigate('/search', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       const errorResponse = err as { response?: { data?: { msg?: string }; status?: number } };
       let errorMsg = 'Login failed. Please check your credentials and try again.';

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { Navbar } from './components/layout/Navbar';
@@ -8,34 +8,11 @@ import { Register } from './pages/Register';
 import { Search } from './pages/Search';
 import { CreateItinerary } from './pages/CreateItinerary';
 import { ItineraryBuilder } from './pages/ItineraryBuilder';
+import { MyItineraries } from './pages/MyItineraries';
 import { AIItinerary } from './pages/AIItinerary';
 import { Companions } from './pages/Companions';
 import { Chat } from './pages/Chat';
 import './App.css';
-import { useEffect } from 'react';
-
-function ItineraryRedirect() {
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const stored = localStorage.getItem('planit_current_itinerary');
-    if (stored) {
-      try {
-        const itinerary = JSON.parse(stored);
-        const id = itinerary.itinerary_id || itinerary.id;
-        if (id) {
-          navigate(`/itineraries/${id}`, { replace: true });
-          return;
-        }
-      } catch (e) {
-        console.error('Error parsing itinerary:', e);
-      }
-    }
-    navigate('/itineraries/create', { replace: true });
-  }, [navigate]);
-  
-  return null;
-}
 
 function App() {
   return (
@@ -67,7 +44,7 @@ function App() {
               path="/itineraries"
               element={
                 <ProtectedRoute>
-                  <ItineraryRedirect />
+                  <MyItineraries />
                 </ProtectedRoute>
               }
             />
