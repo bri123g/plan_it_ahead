@@ -520,11 +520,15 @@ export function Search() {
 
       // Prepare payload
       const flights = pendingItems.filter(item => item.type === 'flight').map(item => item.data);
-      const items = pendingItems.filter(item => item.type !== 'flight').map(item => ({
-        name: item.data.name || item.data.title,
-        price: item.data.price || item.data.price_per_night || 0,
-        type: item.type
-      }));
+      const items = pendingItems.filter(item => item.type !== 'flight').map(item => {
+        const itemType = item.type || 'other';
+        const itemPrice = item.data?.price || item.data?.price_per_night || item.data?.estimated_cost || 0;
+        return {
+          name: item.data?.name || item.data?.title || 'Unknown',
+          price: Number(itemPrice) || 0,
+          type: itemType
+        };
+      });
 
       // Save to backend
       const response = await api.post(`/itineraries/${itineraryId}/save`, {

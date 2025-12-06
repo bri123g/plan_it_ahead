@@ -85,7 +85,7 @@ def get_class(name):
     if name in manual_classes:
         return manual_classes[name]
     
-    raise RuntimeError(f"Reflected class for table '{name}' not found")
+        raise RuntimeError(f"Reflected class for table '{name}' not found")
 
 
 def get_table(name):

@@ -6,11 +6,20 @@ from datetime import datetime
 bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 
 
+def _get_user_id():
+    identity = get_jwt_identity()
+    if not identity:
+        return None
+    try:
+        return int(identity)
+    except (ValueError, TypeError):
+        return None
+
+
 @bp.route('/conversations', methods=['GET'])
 @jwt_required()
 def list_conversations():
-    identity = get_jwt_identity() or {}
-    user_id = identity.get('user_id')
+    user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
 
@@ -65,13 +74,12 @@ def list_conversations():
 @bp.route('/conversations', methods=['POST'])
 @jwt_required()
 def create_conversation():
-    identity = get_jwt_identity() or {}
-    user_id = identity.get('user_id')
+    user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
 
     data = request.get_json() or {}
-    other_user_id = data.get('user_id', type=int)
+    other_user_id = data.get('user_id')
     
     if not other_user_id:
         return jsonify({'msg': 'user_id required'}), 400
@@ -109,8 +117,7 @@ def create_conversation():
 @bp.route('/conversations/<int:conversation_id>/messages', methods=['GET'])
 @jwt_required()
 def get_messages(conversation_id):
-    identity = get_jwt_identity() or {}
-    user_id = identity.get('user_id')
+    user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
 
@@ -152,8 +159,7 @@ def get_messages(conversation_id):
 @bp.route('/conversations/<int:conversation_id>/messages', methods=['POST'])
 @jwt_required()
 def send_message(conversation_id):
-    identity = get_jwt_identity() or {}
-    user_id = identity.get('user_id')
+    user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
 
@@ -200,8 +206,7 @@ def send_message(conversation_id):
 @bp.route('/conversations/<int:conversation_id>/read', methods=['PUT'])
 @jwt_required()
 def mark_read(conversation_id):
-    identity = get_jwt_identity() or {}
-    user_id = identity.get('user_id')
+    user_id = _get_user_id()
     if not user_id:
         return jsonify({'msg': 'invalid token'}), 401
 

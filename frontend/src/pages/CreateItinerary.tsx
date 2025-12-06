@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -23,6 +23,7 @@ interface Flight {
 
 export function CreateItinerary() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState('');
@@ -39,6 +40,45 @@ export function CreateItinerary() {
   const [destinationSuggestions, setDestinationSuggestions] = useState<Array<{code: string; name: string; display_name: string; city?: string; country?: string}>>([]);
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
+  
+  interface Recommendation {
+    name: string;
+    type?: string;
+    reasoning: string;
+    best_time?: string;
+    duration_minutes?: number;
+    estimated_cost?: number;
+    location?: string;
+    image_url?: string;
+  }
+  
+  const [aiRecommendations, setAiRecommendations] = useState<Recommendation[]>([]);
+
+  useEffect(() => {
+    if (location.state) {
+      const state = location.state as {
+        destination?: string;
+        departureDate?: string;
+        returnDate?: string;
+        recommendations?: Recommendation[];
+      };
+      
+      if (state.departureDate) {
+        setDepartureDate(state.departureDate);
+      }
+      if (state.returnDate) {
+        setReturnDate(state.returnDate);
+      }
+      if (state.recommendations) {
+        setAiRecommendations(state.recommendations);
+      }
+      
+      if (state.destination) {
+        const destinationCity = state.destination;
+        searchAirports(destinationCity, false);
+      }
+    }
+  }, [location.state]);
 
   const searchAirports = async (query: string, isOrigin: boolean) => {
     if (!query || query.length < 2) {
@@ -98,7 +138,6 @@ export function CreateItinerary() {
     setError('');
 
     try {
-      // Search outbound flights
       const outboundResponse = await api.get('/search/flights', {
         params: {
           origin: origin.toUpperCase(),
@@ -109,7 +148,6 @@ export function CreateItinerary() {
       });
       setOutboundFlights(outboundResponse.data.flights || []);
 
-      // Search return flights if return date is provided
       if (returnDate) {
         const returnResponse = await api.get('/search/flights', {
           params: {
@@ -147,7 +185,6 @@ export function CreateItinerary() {
 
       const itineraryId = response.data.itinerary_id;
 
-      // Store selected flights in localStorage for later saving
       const pendingFlights = [];
       
       const outboundFlight = outboundFlights.find(f => (f.flight_id || f.id) === selectedOutbound);
@@ -182,8 +219,31 @@ export function CreateItinerary() {
         }
       }
 
-      // Store pending flights and itinerary ID in localStorage
-      localStorage.setItem('planit_pending_items', JSON.stringify(pendingFlights));
+      const allPendingItems = [...pendingFlights];
+      if (aiRecommendations.length > 0) {
+        const storedRecs = localStorage.getItem('planit_ai_recommendations');
+        const recommendations: Recommendation[] = storedRecs ? JSON.parse(storedRecs) : aiRecommendations;
+        
+        recommendations.forEach((rec: Recommendation) => {
+          allPendingItems.push({
+            type: 'attraction',
+            data: {
+              name: rec.name,
+              description: rec.reasoning,
+              price: rec.estimated_cost || 0,
+              duration_minutes: rec.duration_minutes,
+              location: rec.location,
+              type: rec.type,
+              best_time: rec.best_time
+            },
+            addedAt: new Date().toISOString()
+          });
+        });
+        
+        localStorage.removeItem('planit_ai_recommendations');
+      }
+
+      localStorage.setItem('planit_pending_items', JSON.stringify(allPendingItems));
       localStorage.setItem('planit_current_itinerary', JSON.stringify({
         itinerary_id: itineraryId,
         title: title || `Trip to ${destination}`,
@@ -193,7 +253,6 @@ export function CreateItinerary() {
         return_date: returnDate
       }));
 
-      // Navigate to search page to add more items
       navigate('/search');
     } catch (err) {
       const errorResponse = err as { response?: { data?: { msg?: string } } };
@@ -248,9 +307,20 @@ export function CreateItinerary() {
                 id="destination"
                 value={destination}
                 onChange={(e) => handleDestinationChange(e.target.value)}
-                onFocus={() => destination && destinationSuggestions.length > 0 && setShowDestinationSuggestions(true)}
+                onFocus={() => {
+                  const state = location.state as { destination?: string } | null;
+                  if (state?.destination && !destination) {
+                    searchAirports(state.destination, false);
+                  }
+                  if (destination && destinationSuggestions.length > 0) {
+                    setShowDestinationSuggestions(true);
+                  }
+                }}
                 onBlur={() => setTimeout(() => setShowDestinationSuggestions(false), 200)}
-                placeholder="Search airport or city..."
+                placeholder={(() => {
+                  const state = location.state as { destination?: string } | null;
+                  return state?.destination ? `Search airports in ${state.destination}...` : "Search airport or city...";
+                })()}
                 className="mt-1"
               />
               {showDestinationSuggestions && destinationSuggestions.length > 0 && (

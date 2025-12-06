@@ -737,7 +737,7 @@ def save_itinerary(itinerary_id):
                     'to_airport': str(flight_data.get('destination', 'N/A'))[:10],
                     'price': price,
                 }
-
+                
                 # Handle class field
                 if hasattr(Flight, 'class_'):
                     flight_record['class_'] = str(flight_data.get('travel_class', 'Economy'))[:20]
@@ -765,22 +765,24 @@ def save_itinerary(itinerary_id):
         except Exception as e:
             print(f"Error saving flights: {e}")
         
-        # Calculate cost from other items and categorize
         for item in items:
             cost = float(item.get('price', item.get('estimated_cost', 0))) if item.get('price', item.get('estimated_cost')) else 0.0
             total_cost += cost
-            item_type = item.get('type', item.get('item_type', 'other')).lower()
+            item_type = item.get('type', item.get('item_type', 'other'))
+            if isinstance(item_type, str):
+                item_type = item_type.lower().strip()
+            else:
+                item_type = 'other'
             
             if item_type in ['hotel', 'hotels', 'accommodation']:
                 breakdown['hotels'] += cost
-            elif item_type in ['attraction', 'attractions', 'poi']:
+            elif item_type in ['attraction', 'attractions', 'poi', 'point of interest']:
                 breakdown['attractions'] += cost
             else:
                 breakdown['other'] += cost
             
             saved_items.append({'name': item.get('name', 'Unknown'), 'cost': cost, 'type': item_type})
         
-        # Update itinerary total_cost
         if hasattr(it, 'total_cost'):
             it.total_cost = total_cost
         

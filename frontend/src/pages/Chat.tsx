@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
 
@@ -8,9 +8,11 @@ interface Conversation {
   other_user?: {
     user_id: number;
     name: string;
+    email?: string;
   };
   last_message?: {
     content: string;
+    created_at?: string;
   };
 }
 
@@ -23,11 +25,15 @@ interface Message {
 
 export function Chat() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<number | null>(id ? parseInt(id) : null);
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const selectedConversation = useMemo(() => {
+    return id ? parseInt(id) : null;
+  }, [id]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,23 +50,28 @@ export function Chat() {
     }
   }, [selectedConversation]);
 
-  const loadConversations = useCallback(async () => {
-    try {
-      const response = await api.get('/chat/conversations');
-      setConversations(response.data.conversations || []);
-      if (!selectedConversation && response.data.conversations?.length > 0) {
-        setSelectedConversation(response.data.conversations[0].conversation_id);
-      }
-    } catch (err) {
-      console.error('Failed to load conversations:', err);
-    }
-  }, [selectedConversation]);
-
   useEffect(() => {
-    setTimeout(() => {
-      loadConversations();
-    }, 0);
-  }, [loadConversations]);
+    let cancelled = false;
+    
+    const loadConversations = async () => {
+      try {
+        const response = await api.get('/chat/conversations');
+        if (!cancelled) {
+          setConversations(response.data.conversations || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load conversations:', err);
+        }
+      }
+    };
+    
+    loadConversations();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -105,7 +116,7 @@ export function Chat() {
             {conversations.map((conv) => (
               <div
                 key={conv.conversation_id}
-                onClick={() => setSelectedConversation(conv.conversation_id)}
+                onClick={() => navigate(`/chat/${conv.conversation_id}`)}
                 className={`p-3 rounded cursor-pointer ${
                   selectedConversation === conv.conversation_id
                     ? 'bg-blue-50 border border-blue-200'

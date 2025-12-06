@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -45,12 +46,15 @@ interface Recommendation {
 type OutputMode = 'none' | 'itinerary' | 'recommendations';
 
 export function AIItinerary() {
+  const navigate = useNavigate();
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [budget, setBudget] = useState('');
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
+  const [statusMessage, setStatusMessage] = useState<{ index: number; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [outputMode, setOutputMode] = useState<OutputMode>('none');
@@ -108,6 +112,47 @@ export function AIItinerary() {
   const formatCost = (cost: number | undefined | null) => {
     if (cost === undefined || cost === null) return null;
     return `$${cost.toFixed(2)}`;
+  };
+
+  const toggleRecommendation = (index: number) => {
+    const newSelected = new Set(selectedRecommendations);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+      setStatusMessage({ index, message: 'Itinerary removed' });
+    } else {
+      newSelected.add(index);
+      setStatusMessage({ index, message: 'Itinerary added' });
+    }
+    setSelectedRecommendations(newSelected);
+    
+    setTimeout(() => {
+      setStatusMessage(null);
+    }, 2000);
+  };
+
+  const handleNextToFlights = () => {
+    if (selectedRecommendations.size === 0) {
+      setError('Please select at least one recommendation');
+      return;
+    }
+
+    if (!destination || !startDate || !endDate) {
+      setError('Please fill in destination, start date, and end date');
+      return;
+    }
+
+    const selectedRecs = Array.from(selectedRecommendations).map(idx => recommendations[idx]);
+    
+    localStorage.setItem('planit_ai_recommendations', JSON.stringify(selectedRecs));
+    
+    navigate('/itineraries/create', {
+      state: {
+        destination,
+        departureDate: startDate,
+        returnDate: endDate,
+        recommendations: selectedRecs
+      }
+    });
   };
 
   return (
@@ -353,66 +398,139 @@ export function AIItinerary() {
               )}
 
               {outputMode === 'recommendations' && recommendations.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2">
-                  {recommendations.map((rec, index) => (
-                    <div 
-                      key={index} 
-                      className="border rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
-                    >
-                      {rec.image_url && (
-                        <div className="relative h-40 overflow-hidden">
-                          <img 
-                            src={rec.image_url} 
-                            alt={rec.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                          {rec.type && (
-                            <span className="absolute top-2 right-2 text-xs bg-white/90 text-primary px-2 py-1 rounded-full font-medium">
-                              {rec.type}
-                            </span>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2">
+                    {recommendations.map((rec, index) => {
+                      const isSelected = selectedRecommendations.has(index);
+                      const showMessage = statusMessage?.index === index;
+                      return (
+                        <div 
+                          key={index} 
+                          className="border rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group relative"
+                        >
+                          {rec.image_url && (
+                            <div className="relative h-40 overflow-hidden">
+                              <img 
+                                src={rec.image_url} 
+                                alt={rec.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                              {rec.type && (
+                                <span className="absolute top-2 right-2 text-xs bg-white/90 text-primary px-2 py-1 rounded-full font-medium">
+                                  {rec.type}
+                                </span>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRecommendation(index);
+                                }}
+                                className={`absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                  isSelected
+                                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                                    : 'bg-white/90 hover:bg-white text-primary'
+                                } shadow-lg hover:scale-110`}
+                              >
+                                {isSelected ? (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                )}
+                              </button>
+                              {showMessage && (
+                                <div className="absolute bottom-12 right-2 bg-black/80 text-white text-xs px-3 py-1.5 rounded-md whitespace-nowrap transition-opacity duration-200">
+                                  {statusMessage.message}
+                                </div>
+                              )}
+                            </div>
                           )}
+                          {!rec.image_url && (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRecommendation(index);
+                                }}
+                                className={`absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                  isSelected
+                                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                                    : 'bg-white hover:bg-gray-100 text-primary border border-gray-300'
+                                } shadow-lg hover:scale-110 z-10`}
+                              >
+                                {isSelected ? (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                )}
+                              </button>
+                              {showMessage && (
+                                <div className="absolute top-12 right-2 bg-black/80 text-white text-xs px-3 py-1.5 rounded-md whitespace-nowrap transition-opacity duration-200 z-20">
+                                  {statusMessage.message}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">
+                                {rec.name}
+                              </h3>
+                              {!rec.image_url && rec.type && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                                  {rec.type}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{rec.reasoning}</p>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {rec.best_time && (
+                                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                  <span>🕐</span> {rec.best_time}
+                                </span>
+                              )}
+                              {rec.duration_minutes && (
+                                <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                  <span>⏱️</span> {rec.duration_minutes} min
+                                </span>
+                              )}
+                              {formatCost(rec.estimated_cost) && (
+                                <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                  <span>💵</span> {formatCost(rec.estimated_cost)}
+                                </span>
+                              )}
+                            </div>
+                            {rec.location && (
+                              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                <span>📍</span> {rec.location}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">
-                            {rec.name}
-                          </h3>
-                          {!rec.image_url && rec.type && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                              {rec.type}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{rec.reasoning}</p>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          {rec.best_time && (
-                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1">
-                              <span>🕐</span> {rec.best_time}
-                            </span>
-                          )}
-                          {rec.duration_minutes && (
-                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1">
-                              <span>⏱️</span> {rec.duration_minutes} min
-                            </span>
-                          )}
-                          {formatCost(rec.estimated_cost) && (
-                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
-                              <span>💵</span> {formatCost(rec.estimated_cost)}
-                            </span>
-                          )}
-                        </div>
-                        {rec.location && (
-                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                            <span>📍</span> {rec.location}
-                          </p>
-                        )}
-                      </div>
+                      );
+                    })}
+                  </div>
+                  {selectedRecommendations.size > 0 && (
+                    <div className="mt-6 flex justify-center">
+                      <Button
+                        onClick={handleNextToFlights}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                        size="lg"
+                      >
+                        Next: Pick Flight
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
 
               {outputMode === 'recommendations' && recommendations.length === 0 && !loading && (
