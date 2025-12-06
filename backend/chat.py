@@ -191,16 +191,25 @@ def send_message(conversation_id):
         'content': content
     }
     
-    if hasattr(Message, 'created_at'):
-        msg_data['created_at'] = datetime.utcnow()
+    # Let the database set created_at with CURRENT_TIMESTAMP instead of UTC
+    # This ensures the correct local time is used
     
     new_msg = Message(**msg_data)
     session.add(new_msg)
     session.commit()
+    session.refresh(new_msg)  # Refresh to get the database-generated timestamp
     
-    msg_id = getattr(new_msg, 'message_id', None)
+    # Return the created message with its timestamp
+    msg_dict = {}
+    for key in new_msg.__table__.columns.keys():
+        value = getattr(new_msg, key)
+        if isinstance(value, datetime):
+            msg_dict[key] = value.isoformat()
+        else:
+            msg_dict[key] = value
+    
     session.close()
-    return jsonify({'msg': 'message sent', 'message_id': msg_id}), 201
+    return jsonify({'msg': 'message sent', 'message': msg_dict}), 201
 
 
 @bp.route('/conversations/<int:conversation_id>/read', methods=['PUT'])

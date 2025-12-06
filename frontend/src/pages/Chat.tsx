@@ -44,7 +44,19 @@ export function Chat() {
     
     try {
       const response = await api.get(`/chat/conversations/${selectedConversation}/messages`);
-      setMessages(response.data.messages || []);
+      const newMessages = response.data.messages || [];
+      
+      // Update messages, avoiding duplicates and maintaining order
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.message_id));
+        const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.message_id));
+        
+        if (uniqueNewMessages.length === 0 && prev.length === newMessages.length) {
+          return prev; // No changes, avoid re-render
+        }
+        
+        return newMessages; // Use server order which is sorted by created_at ASC
+      });
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -93,11 +105,25 @@ export function Chat() {
     if (!message.trim() || !selectedConversation) return;
 
     try {
-      await api.post(`/chat/conversations/${selectedConversation}/messages`, {
+      const response = await api.post(`/chat/conversations/${selectedConversation}/messages`, {
         content: message
       });
       setMessage('');
-      loadMessages();
+      
+      // Immediately add the new message in proper order
+      if (response.data.message) {
+        setMessages(prev => {
+          // Check if message already exists to avoid duplicates
+          const exists = prev.some(m => m.message_id === response.data.message.message_id);
+          if (exists) return prev;
+          
+          // Add new message at the end (messages are ordered by created_at ASC)
+          return [...prev, response.data.message];
+        });
+        setTimeout(scrollToBottom, 100);
+      } else {
+        loadMessages();
+      }
     } catch (err) {
       console.error('Failed to send message:', err);
     }
@@ -106,24 +132,29 @@ export function Chat() {
   const currentConversation = conversations.find(c => c.conversation_id === selectedConversation);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Chat</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+      <div className="container mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-blue-600">Chat</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
-        <div className="border rounded-lg p-4 overflow-y-auto">
-          <h2 className="font-semibold mb-4">Conversations</h2>
-          <div className="space-y-2">
+        <div className="border rounded-lg p-4 overflow-y-auto bg-white shadow-sm">
+          <h2 className="font-semibold mb-4 text-blue-600">Conversations</h2>
+          <div className="space-y-3">
             {conversations.map((conv) => (
               <div
                 key={conv.conversation_id}
                 onClick={() => navigate(`/chat/${conv.conversation_id}`)}
-                className={`p-3 rounded cursor-pointer ${
+                className={`p-3 rounded cursor-pointer transition-all border ${
                   selectedConversation === conv.conversation_id
-                    ? 'bg-blue-50 border border-blue-200'
-                    : 'hover:bg-gray-50'
+                    ? 'bg-blue-50 border-blue-400'
+                    : 'border-gray-200 hover:border-blue-600 hover:shadow-md'
                 }`}
               >
-                <h3 className="font-medium">{conv.other_user?.name || 'Unknown'}</h3>
+                <h3 className={`font-medium transition-colors ${
+                  selectedConversation === conv.conversation_id
+                    ? 'text-blue-600'
+                    : 'hover:text-blue-600'
+                }`}>{conv.other_user?.name || 'Unknown'}</h3>
                 {conv.last_message && (
                   <p className="text-sm text-gray-600 truncate">
                     {conv.last_message.content}
@@ -134,11 +165,11 @@ export function Chat() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 border rounded-lg flex flex-col">
+        <div className="lg:col-span-2 border rounded-lg flex flex-col bg-white shadow-sm">
           {selectedConversation ? (
             <>
-              <div className="p-4 border-b">
-                <h2 className="font-semibold">
+              <div className="p-4 border-b bg-blue-50">
+                <h2 className="font-semibold text-blue-600">
                   {currentConversation?.other_user?.name || 'Chat'}
                 </h2>
               </div>
@@ -157,7 +188,7 @@ export function Chat() {
                       className={`max-w-xs p-3 rounded-lg ${
                         msg.sender_id === currentConversation?.other_user?.user_id
                           ? 'bg-gray-100'
-                          : 'bg-blue-500 text-white'
+                          : 'bg-blue-600 text-white'
                       }`}
                     >
                       <p>{msg.content}</p>
@@ -172,16 +203,16 @@ export function Chat() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-4 border-t flex gap-2">
+              <div className="p-4 border-t flex gap-2 bg-gray-50">
                 <input
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 border rounded-md"
+                  className="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <Button onClick={sendMessage}>Send</Button>
+                <Button onClick={sendMessage} className="bg-blue-600 hover:bg-blue-700 text-white">Send</Button>
               </div>
             </>
           ) : (
@@ -190,6 +221,7 @@ export function Chat() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -132,10 +132,10 @@ export function Companions() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
             Find Travel Companions
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -146,7 +146,7 @@ export function Companions() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              <CardTitle className="text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Your Preferences
               </CardTitle>
               <CardDescription>
@@ -257,8 +257,8 @@ export function Companions() {
                       onClick={() => toggleInterest(interest)}
                       className={`px-2 py-1 text-xs rounded-full transition-all ${
                         selectedInterests.includes(interest)
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-300'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-gray-300 text-gray-700 hover:border-blue-400'
                       }`}
                     >
                       {interest}
@@ -282,7 +282,7 @@ export function Companions() {
               <Button
                 onClick={findCompanions}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                 size="lg"
               >
                 {loading ? (
@@ -302,7 +302,7 @@ export function Companions() {
 
           <Card className="lg:col-span-2 shadow-xl border-0 bg-white/80 backdrop-blur-sm min-h-[600px]">
             <CardHeader>
-              <CardTitle className="text-xl bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+              <CardTitle className="text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
                 <span>👥</span>
                 {matches.length > 0 ? `${matches.length} Potential Companions` : 'Your Matches'}
               </CardTitle>
@@ -315,7 +315,7 @@ export function Companions() {
             <CardContent>
               {matches.length === 0 && !loading ? (
                 <div className="flex flex-col items-center justify-center h-80 text-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-pink-100 to-purple-100 flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center mb-4">
                     <span className="text-4xl">🌍</span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-2">Ready to Find Travel Buddies?</h3>
@@ -332,7 +332,7 @@ export function Companions() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-400 to-purple-400 flex items-center justify-center text-white font-bold text-xl">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl">
                             {match.name.charAt(0)}
                           </div>
                           <div className="flex-1">
@@ -356,7 +356,7 @@ export function Companions() {
                                   </span>
                                 )}
                                 {match.preferences.travel_style && (
-                                  <span className="text-xs bg-pink-50 text-pink-700 px-2 py-1 rounded-full">
+                                  <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">
                                     {match.preferences.travel_style} traveler
                                   </span>
                                 )}
@@ -396,7 +396,7 @@ export function Companions() {
                         <Button
                           onClick={() => startChat(match.user_id, match.name, match.compatibility_score)}
                           disabled={connecting === match.user_id}
-                          className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                           size="sm"
                         >
                           {connecting === match.user_id ? (

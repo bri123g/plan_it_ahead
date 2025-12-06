@@ -653,10 +653,8 @@ def add_flight_to_itinerary(itinerary_id):
             duration_str = data.get('duration', '')
             if hasattr(Flight, 'duration'):
                 duration_minutes = _parse_iso_duration_to_minutes(duration_str)
-                if duration_minutes is not None:
-                    flight_data['duration'] = timedelta(minutes=int(duration_minutes))
-                else:
-                    flight_data['duration'] = None
+                # Store as integer minutes, not timedelta
+                flight_data['duration'] = int(duration_minutes) if duration_minutes is not None else None
             
             flight = Flight(**flight_data)
             session.add(flight)
@@ -758,31 +756,20 @@ def save_itinerary(itinerary_id):
                     flight_record['flight_class'] = str(flight_data.get('travel_class', 'Economy'))[:20]
 
                 if hasattr(Flight, 'duration'):
-                    # Convert minutes to timedelta for PostgreSQL interval type
+                    # Store duration as integer minutes, not timedelta
                     duration_minutes = _parse_iso_duration_to_minutes(flight_data.get('duration', ''))
-                    if duration_minutes is not None:
-                        flight_record['duration'] = timedelta(minutes=int(duration_minutes))
-                    else:
-                        flight_record['duration'] = None
+                    flight_record['duration'] = int(duration_minutes) if duration_minutes is not None else None
 
                 # Skip if DB already contains this flight_num or we've already added it in this batch
                 if fnum in existing_nums or fnum in added_nums:
-                    # Convert timedelta to seconds for JSON serialization
-                    response_record = flight_record.copy()
-                    if 'duration' in response_record:
-                        response_record['duration'] = _timedelta_to_seconds(response_record['duration'])
-                    saved_flights.append(response_record)
+                    saved_flights.append(flight_record.copy())
                     continue
 
                 try:
                     flight = Flight(**flight_record)
                     session.add(flight)
                     added_nums.add(fnum)
-                    # Convert timedelta to seconds for JSON serialization
-                    response_record = flight_record.copy()
-                    if 'duration' in response_record:
-                        response_record['duration'] = _timedelta_to_seconds(response_record['duration'])
-                    saved_flights.append(response_record)
+                    saved_flights.append(flight_record.copy())
                 except Exception as e:
                     # If insertion fails, log and continue
                     print(f"Error adding flight record: {e}")
