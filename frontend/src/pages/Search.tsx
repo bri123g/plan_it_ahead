@@ -100,7 +100,7 @@ function clearPendingItems(): void {
 
 export function Search() {
   const navigate = useNavigate();
-  const [searchType, setSearchType] = useState<SearchType>('attractions');
+  const [searchType, setSearchType] = useState<SearchType>('hotels');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [attractionDetails, setAttractionDetails] = useState<Record<string, AttractionDetail>>({});
@@ -171,6 +171,22 @@ export function Search() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-check localStorage when navigating back to this page
+  useEffect(() => {
+    const handleFocus = () => {
+      const storedItinerary = localStorage.getItem('planit_current_itinerary');
+      if (storedItinerary && !currentItinerary) {
+        const itinerary = JSON.parse(storedItinerary) as CurrentItinerary;
+        setCurrentItinerary(itinerary);
+        setSelectedItineraryId(itinerary.itinerary_id);
+      }
+      setPendingItems(getPendingItems());
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentItinerary]);
 
   // compute a sensible default itinerary title:
   // - If current itinerary has a title, use it
@@ -602,9 +618,12 @@ export function Search() {
 
   const removePendingItem = (index: number) => {
     const items = getPendingItems();
+    const removedItem = items[index];
     items.splice(index, 1);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     setPendingItems(items);
+    setSuccessMessage(`${removedItem.type.charAt(0).toUpperCase() + removedItem.type.slice(1)} removed from pending items!`);
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   return (
@@ -643,7 +662,8 @@ export function Search() {
         {(['attractions', 'hotels'] as SearchType[]).map((type) => (
           <Button
             key={type}
-            variant={searchType === type ? 'default' : 'outline'}
+            variant="outline"
+            className={searchType === type ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 hover:text-white' : 'hover:bg-gray-100'}
             onClick={() => switchSearchType(type)}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -661,7 +681,7 @@ export function Search() {
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             className="flex-1"
           />
-          <Button onClick={() => handleSearch()} disabled={loading} className="transition hover:bg-blue-200 hover:text-white">
+          <Button onClick={() => handleSearch()} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             {loading ? 'Searching...' : 'Search'}
           </Button>
           
@@ -698,7 +718,7 @@ export function Search() {
           <h3 className="font-bold mb-2">Pending Items ({pendingItems.length})</h3>
           <div className="space-y-2">
             {pendingItems.map((item, index) => (
-              <div key={index} className="flex justify-between items-center bg-white p-2 rounded">
+              <div key={index} className="flex justify-between items-center bg-white p-2 rounded hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">
                 <span>
                   <strong>{item.type}:</strong> {item.data.name || item.data.title} 
                   {(item.data.price || item.data.price_per_night) && ` - $${item.data.price || item.data.price_per_night}`}
