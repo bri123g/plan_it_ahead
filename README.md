@@ -1,143 +1,62 @@
-# Plan It Ahead - Full Stack Application
+🌍 Plan It Ahead - Full Stack Travel Planner
 
-**Description:** AI-powered itinerary planner with a React (TypeScript + Vite) frontend and Flask backend. Generates personalized travel plans and stores user preferences in a database.  
+🚀 Description
 
-**Tech Stack:** React, TypeScript, Vite, Flask, Python, SQLite  
+PlanItAhead.com is an AI-powered travel planning web app that helps users generate personalized itineraries. It integrates flights, hotels, attractions, and a companion matching system, allowing users to plan trips, save preferences, and chat with potential travel companions—all in one place.
 
-**Features:**
-- Personalized AI-generated travel itineraries
-- Stores user preferences and travel data
-- Full-stack React + Flask application  
+This project demonstrates advanced database design, API integration, and AI-powered personalization, making it both educational and practical.
 
-## Project Structure
+🎯 Motivation
 
-```
-plan_it_ahead/
-├── frontend/          # React + TypeScript + Vite frontend
-│   ├── src/          # Source code
-│   ├── public/       # Static assets
-│   └── package.json  # Frontend dependencies
-├── backend/          # Flask Python backend
-│   ├── app.py       # Main Flask application
-│   └── requirements.txt  # Python dependencies
-└── README.md        # This file
-```
+Travel planning is often scattered across multiple platforms, making it inefficient and time-consuming. PlanItAhead streamlines this by:
 
-## Getting Started
+Handling all travel planning in one platform
 
-### Prerequisites
+Demonstrating complex relational database design
 
-- Node.js (v18 or higher)
-- Python 3.8 or higher
-- npm or yarn
+Integrating external APIs for flights, hotels, and attractions
 
-### Frontend Setup
+Providing AI-driven recommendations and companion matching
 
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
+💻 Tech Stack
 
-2. Install dependencies:
-```bash
-npm install
-```
+Frontend: React.js, TypeScript, Vite, Tailwind CSS
 
-3. Start the development server:
-```bash
-npm run dev
-```
+Backend: Flask, Python
 
-The frontend will be available at `http://localhost:5173` (default Vite port).
+Database: PostgreSQL / SQLite
 
-### Backend Setup
+AI Modules: OpenAI API, Pandas
 
-1. Navigate to the backend directory:
-```bash
-cd backend
-```
+Deployment: Vercel
 
-2. Create a virtual environment:
-```bash
-python -m venv venv
-```
+External APIs: Serp API, Google API, OpenTripMap API
 
-3. Activate the virtual environment:
-   - **Windows**: `venv\Scripts\activate`
-   - **Linux/Mac**: `source venv/bin/activate`
+✨ Features
+Basic
 
-4. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+User registration, login, and profile management
 
-5. Create a `.env` file (copy from `.env.example` if available):
-```bash
-# Create .env file with:
-FLASK_DEBUG=True
-PORT=5000
-SECRET_KEY=your-secret-key-here
-```
+Create, view, update, and delete itineraries
 
-6. Run the Flask server:
-```bash
-python app.py
-```
+Search for flights, hotels, and attractions via APIs
 
-The backend API will be available at `http://localhost:5000`.
+Add trips elements (flights, hotels, attractions) to itineraries
 
-## Development
+Advanced
 
-### Running Both Servers
+AI-driven itinerary generation and recommendations based on preferences
 
-You'll need to run both the frontend and backend servers simultaneously:
+Companion matching with chat functionality
 
-1. **Terminal 1** - Frontend:
-```bash
-cd frontend
-npm run dev
-```
+Optimized itinerary planning considering activity duration, distance, and timing
 
-2. **Terminal 2** - Backend:
-```bash
-cd backend
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-python app.py
-```
+🗄 Database Overview
 
-### API Endpoints
+Fully normalized relational schema (3NF/BCNF)
 
-- `GET /api/health` - Health check endpoint
-- `GET /api/test` - Test endpoint
+Key tables: Users, Itineraries, Flights, Hotels, Attractions, Bookings, Conversations, Messages, CompanionMatches
 
-## Building for Production
+Handles many-to-many relationships using junction tables (Plans, Includes, Adds, Has, ComesWith)
 
-### Frontend
-
-```bash
-cd frontend
-npm run build
-```
-
-The production build will be in `frontend/dist/`.
-
-### Backend
-
-Ensure your `.env` file has production settings:
-- `FLASK_DEBUG=False`
-- `SECRET_KEY` set to a secure random string
-
-## Environment Variables
-
-### Frontend
-Create `frontend/.env` for frontend-specific environment variables (e.g., API URLs).
-
-### Backend
-Create `backend/.env` with:
-- `FLASK_DEBUG` - Set to `False` in production
-- `PORT` - Server port (default: 5000)
-- `SECRET_KEY` - Secret key for Flask sessions
-
-## License
-
-This project is part of a database assignment.
+Enforces data integrity with foreign keys, unique constraints, and cascading updates/deletes
