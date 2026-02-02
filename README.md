@@ -1,6 +1,13 @@
 # Plan It Ahead - Full Stack Application
 
-A full-stack application built with React (TypeScript + Vite) frontend and Flask backend.
+**Description:** AI-powered itinerary planner with a React (TypeScript + Vite) frontend and Flask backend. Generates personalized travel plans and stores user preferences in a database.  
+
+**Tech Stack:** React, TypeScript, Vite, Flask, Python, SQLite  
+
+**Features:**
+- Personalized AI-generated travel itineraries
+- Stores user preferences and travel data
+- Full-stack React + Flask application  
 
 ## Project Structure
 
